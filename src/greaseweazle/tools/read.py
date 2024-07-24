@@ -70,16 +70,20 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
         dat.decode_flux(flux, pll)
 
     seek_retry, retry = 0, 0
+    max_seek_retry = args.seek_retries
     while True:
-        s = "T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
+        summary_string = dat.summary_string()
+        s = "T%u.%u: %s from %s" % (cyl, head, summary_string,
                                     flux.summary_string())
+        if summary_string == "IBM Empty" and max_seek_retry == 0:
+            max_seek_retry = 3
         if retry != 0:
             s += " (Retry #%u.%u)" % (seek_retry, retry)
         print(s)
         if dat.nr_missing() == 0:
             break
         if args.retries == 0 or (retry % args.retries) == 0:
-            if args.retries == 0 or seek_retry > args.seek_retries:
+            if args.retries == 0 or seek_retry > max_seek_retry:
                 print("T%u.%u: Giving up: %d sectors missing"
                       % (cyl, head, dat.nr_missing()))
                 break
